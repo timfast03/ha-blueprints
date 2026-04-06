@@ -88,6 +88,9 @@ Klicke oben auf den **"Import Blueprint"** Button → Home Assistant öffnet sic
 
 ## Changelog
 
+### Room Lighting v1.2
+- Fix: LUX-Abfall überschreibt keine manuell aktivierten Szenen mehr (szene_aktiv Check)
+
 ### Room Lighting v1.1
 - LUX-Abfall-Trigger mit 5-Sekunden-Stabilisierung (verhindert Fehlauslösung bei Lichtänderungen)
 - Szenen-Gedächtnis Reset bei Bypass AUS

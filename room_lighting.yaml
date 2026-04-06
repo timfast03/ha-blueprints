@@ -5,7 +5,7 @@ blueprint:
     # 💡 Room Lighting
 
 
-    **Version: 1.1**
+    **Version: 1.2**
 
 
     Präsenzbasierte Raumbeleuchtung mit optionalem Nachtmodus,
@@ -764,6 +764,7 @@ actions:
             state: "on"
           # Bypass prüfen
           - "{{ not (include_bypass_opt == 'enable_bypass' and (is_state(bypass_off_entity, 'on') or is_state(bypass_pause_entity, 'on'))) }}"
+          - "{{ trigger.id != 'lux_low' or include_scene_opt != 'enable_scene_memory' or not is_state(scene_active_entity, 'on') }}"
         sequence:
           - action: light.turn_off
             target:
