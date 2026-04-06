@@ -1,0 +1,907 @@
+blueprint:
+  name: "Room Lighting"
+  source_url: "https://github.com/timfast03/ha-blueprints/blob/main/room_lighting.yaml"
+  description: >
+    # 💡 Room Lighting
+
+
+    **Version: 1.1**
+
+
+    Präsenzbasierte Raumbeleuchtung mit optionalem Nachtmodus,
+    Besuch-Modus, Szenen-Gedächtnis, 3× Bypass und Tageslicht-Abschaltung.
+    Alle Features sind modular ein-/abschaltbar.
+
+
+    **Features:** Dunkelheitserkennung (Sun + LUX), variable Timeouts,
+    Modus-Wechsel bei Anwesenheit, Adaptive-Lighting-kompatibel.
+
+
+    **Benötigte Helper pro Raum:** 1× Timer, 1× Input Boolean (Auto-Licht).
+    Weitere Helper je nach aktivierten Features.
+  domain: automation
+  input:
+    # ══════════════════════════════════════════════════════════════
+    #  PFLICHT: Trigger & Lichter
+    # ══════════════════════════════════════════════════════════════
+    trigger_settings:
+      name: "Trigger & Lichter *"
+      icon: "mdi:motion-sensor"
+      collapsed: true
+      input:
+        presence_sensor:
+          name: "Präsenzsensor *"
+          description: >
+            Der Sensor der Anwesenheit erkennt (z.B. Aqara FP2).
+          selector:
+            entity:
+              filter:
+                domain: binary_sensor
+        main_light:
+          name: "Hauptlicht *"
+          description: >
+            Das Licht das bei Dunkelheit automatisch eingeschaltet wird.
+            Adaptive Lighting steuert Helligkeit und Farbtemperatur.
+          selector:
+            entity:
+              filter:
+                domain: light
+        all_lights:
+          name: "Alle Lichter im Raum *"
+          description: >
+            Alle Lichtquellen die beim Verlassen ausgeschaltet werden sollen.
+          selector:
+            entity:
+              filter:
+                domain: light
+              multiple: true
+        auto_light_boolean:
+          name: "Auto-Licht Schalter *"
+          description: >
+            Hauptschalter für die Automation. Wenn AUS, passiert nichts.
+            (z.B. input_boolean.auto_licht_kuche)
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+
+    # ══════════════════════════════════════════════════════════════
+    #  PFLICHT: Timer & Timeout
+    # ══════════════════════════════════════════════════════════════
+    timer_settings:
+      name: "Timer & Timeout *"
+      icon: "mdi:timer-outline"
+      collapsed: true
+      input:
+        off_timer:
+          name: "Timer Helper *"
+          description: >
+            Ein Timer-Helper der als Ausschalt-Verzögerung dient.
+            Pro Raum einen eigenen Timer anlegen.
+            (z.B. timer.licht_aus_kuche)
+          selector:
+            entity:
+              filter:
+                domain: timer
+        timeout_normal:
+          name: "Timeout Normal (Minuten)"
+          description: >
+            Wie lange das Licht nach Präsenz-Verlust an bleibt.
+          default: 2
+          selector:
+            number:
+              min: 0.5
+              max: 15
+              step: 0.5
+              unit_of_measurement: "Min"
+
+    # ══════════════════════════════════════════════════════════════
+    #  OPTIONAL: Dunkelheitserkennung (LUX)
+    # ══════════════════════════════════════════════════════════════
+    lux_settings:
+      name: "Dunkelheitserkennung (LUX)"
+      icon: "mdi:brightness-6"
+      collapsed: true
+      input:
+        include_lux:
+          name: "LUX-Sensor verwenden"
+          description: >
+            Aktiviert den LUX-Sensor zusätzlich zur Sun-Elevation.
+            Wenn deaktiviert, wird nur der Sonnenstand geprüft.
+          default: "disable_lux"
+          selector:
+            select:
+              options:
+                - label: "LUX-Sensor aktivieren"
+                  value: "enable_lux"
+                - label: "Nur Sonnenstand verwenden"
+                  value: "disable_lux"
+        lux_sensor:
+          name: "LUX-Sensor"
+          description: >
+            Der Helligkeitssensor im Raum.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: sensor
+                device_class: illuminance
+        lux_threshold_low:
+          name: "LUX Schwelle (dunkel)"
+          description: >
+            Unter diesem Wert gilt der Raum als dunkel.
+            Startwert 25. Kalibrieren: bewölkter Tag ohne Kunstlicht beobachten.
+          default: 25
+          selector:
+            number:
+              min: 5
+              max: 100
+              step: 5
+              unit_of_measurement: "Lux"
+
+    # ══════════════════════════════════════════════════════════════
+    #  OPTIONAL: Tageslicht-Abschaltung
+    # ══════════════════════════════════════════════════════════════
+    daylight_settings:
+      name: "Tageslicht-Abschaltung"
+      icon: "mdi:weather-sunny"
+      collapsed: true
+      input:
+        include_daylight_off:
+          name: "Tageslicht-Abschaltung aktivieren"
+          description: >
+            Schaltet Licht aus wenn es tagsüber hell wird
+            (Sonne > 10° oder LUX über Schwelle). Benötigt LUX-Sensor.
+          default: "disable_daylight_off"
+          selector:
+            select:
+              options:
+                - label: "Tageslicht-Abschaltung aktivieren"
+                  value: "enable_daylight_off"
+                - label: "Tageslicht-Abschaltung deaktivieren"
+                  value: "disable_daylight_off"
+        lux_threshold_high:
+          name: "LUX Schwelle (hell genug)"
+          description: >
+            Über diesem Wert (für 2 Minuten stabil) wird das Licht ausgeschaltet.
+          default: 80
+          selector:
+            number:
+              min: 40
+              max: 300
+              step: 10
+              unit_of_measurement: "Lux"
+
+    # ══════════════════════════════════════════════════════════════
+    #  OPTIONAL: Nachtmodus
+    # ══════════════════════════════════════════════════════════════
+    night_settings:
+      name: "Nachtmodus"
+      icon: "mdi:weather-night"
+      collapsed: true
+      input:
+        include_night_mode:
+          name: "Nachtmodus aktivieren"
+          description: >
+            Aktiviert eine spezielle Nacht-Szene (z.B. gedimmter LED-Stripe)
+            wenn ein Gute-Nacht-Schalter eingeschaltet ist.
+          default: "disable_night_mode"
+          selector:
+            select:
+              options:
+                - label: "Nachtmodus aktivieren"
+                  value: "enable_night_mode"
+                - label: "Nachtmodus deaktivieren"
+                  value: "disable_night_mode"
+        night_mode_boolean:
+          name: "Gute-Nacht Schalter"
+          description: >
+            Globaler Gute-Nacht Schalter (z.B. input_boolean.gute_nacht).
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        night_mode_scene:
+          name: "Nachtlicht-Szene"
+          description: >
+            Die Szene die im Nachtmodus aktiviert wird.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: scene
+        timeout_night:
+          name: "Timeout Nachtmodus (Minuten)"
+          description: >
+            Wie lange das Nachtlicht nach Präsenz-Verlust an bleibt.
+          default: 1
+          selector:
+            number:
+              min: 0.5
+              max: 10
+              step: 0.5
+              unit_of_measurement: "Min"
+
+    # ══════════════════════════════════════════════════════════════
+    #  OPTIONAL: Besuch-Modus
+    # ══════════════════════════════════════════════════════════════
+    guest_settings:
+      name: "Besuch-Modus"
+      icon: "mdi:account-group"
+      collapsed: true
+      input:
+        include_guest_mode:
+          name: "Besuch-Modus aktivieren"
+          description: >
+            Längerer Timeout und optionale Besuch-Szene wenn Gäste da sind.
+            Inkl. Dimm-Warnung vor dem Ausschalten.
+          default: "disable_guest_mode"
+          selector:
+            select:
+              options:
+                - label: "Besuch-Modus aktivieren"
+                  value: "enable_guest_mode"
+                - label: "Besuch-Modus deaktivieren"
+                  value: "disable_guest_mode"
+        guest_mode_boolean:
+          name: "Besuch-Modus Schalter"
+          description: >
+            Globaler Besuch-Modus Schalter (z.B. input_boolean.besuch_modus).
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        guest_mode_scene:
+          name: "Besuch-Szene"
+          description: >
+            Szene die im Besuch-Modus aktiviert wird.
+            Leer lassen um das Hauptlicht zu verwenden.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: scene
+        timeout_guest:
+          name: "Timeout Besuch (Minuten)"
+          description: >
+            Wie lange das Licht im Besuch-Modus nach Präsenz-Verlust an bleibt.
+          default: 10
+          selector:
+            number:
+              min: 2
+              max: 30
+              step: 1
+              unit_of_measurement: "Min"
+
+    # ══════════════════════════════════════════════════════════════
+    #  OPTIONAL: Szenen-Gedächtnis
+    # ══════════════════════════════════════════════════════════════
+    scene_memory_settings:
+      name: "Szenen-Gedächtnis"
+      icon: "mdi:palette"
+      collapsed: true
+      input:
+        include_scene_memory:
+          name: "Szenen-Gedächtnis aktivieren"
+          description: >
+            Merkt sich die letzte manuell aktivierte Szene.
+            Wenn du innerhalb des Zeitfensters zurückkommst,
+            wird die Szene automatisch wiederhergestellt.
+          default: "disable_scene_memory"
+          selector:
+            select:
+              options:
+                - label: "Szenen-Gedächtnis aktivieren"
+                  value: "enable_scene_memory"
+                - label: "Szenen-Gedächtnis deaktivieren"
+                  value: "disable_scene_memory"
+        scene_memory_text:
+          name: "Szenen-Speicher (Input Text)"
+          description: >
+            Ein input_text Helper der die letzte Szene speichert.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_text
+        scene_memory_active:
+          name: "Szene aktiv Flag (Input Boolean)"
+          description: >
+            Ein input_boolean der anzeigt ob gerade eine Szene aktiv ist.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        scene_memory_datetime:
+          name: "Szene Zeitstempel (Input Datetime)"
+          description: >
+            Ein input_datetime der speichert wann die letzte Szene beendet wurde.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_datetime
+        scene_memory_minutes:
+          name: "Szenen-Gedächtnis Dauer (Minuten)"
+          description: >
+            Wie lange die Szene gemerkt wird nach dem Verlassen.
+          default: 10
+          selector:
+            number:
+              min: 2
+              max: 30
+              step: 1
+              unit_of_measurement: "Min"
+        tracked_scenes:
+          name: "Getrackte Szenen"
+          description: >
+            Szenen die automatisch gemerkt werden sollen.
+            Nur manuell aktivierte Szenen eintragen (nicht Nacht/Besuch).
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: scene
+              multiple: true
+        scene_reset_button:
+          name: "Reset-Button (Optional)"
+          description: >
+            Ein input_button Helper zum manuellen Zurücksetzen des
+            Szenen-Gedächtnisses. Einmal drücken → Gedächtnis geleert,
+            Automation verhält sich wieder normal.
+            Leer lassen wenn nicht gewünscht.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_button
+
+    # ══════════════════════════════════════════════════════════════
+    #  OPTIONAL: Bypass
+    # ══════════════════════════════════════════════════════════════
+    bypass_settings:
+      name: "Bypass-Schalter"
+      icon: "mdi:toggle-switch-outline"
+      collapsed: true
+      input:
+        include_bypass:
+          name: "Bypass-Schalter aktivieren"
+          description: >
+            Drei Bypass-Modi: Licht AN (bleibt an), Pause (eingefroren),
+            Licht AUS (sofort aus + blockiert). AUS resettet nach Timer.
+          default: "disable_bypass"
+          selector:
+            select:
+              options:
+                - label: "Bypass aktivieren"
+                  value: "enable_bypass"
+                - label: "Bypass deaktivieren"
+                  value: "disable_bypass"
+        bypass_on_boolean:
+          name: "Bypass: Licht AN"
+          description: >
+            Licht bleibt an, Automation schaltet nicht aus.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        bypass_pause_boolean:
+          name: "Bypass: Pause"
+          description: >
+            Zustand eingefroren, Automation reagiert nicht.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        bypass_off_boolean:
+          name: "Bypass: Licht AUS"
+          description: >
+            Sofort alle Lichter aus, Einschalten blockiert.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        bypass_off_reset_minutes:
+          name: "Bypass AUS Auto-Reset (Minuten)"
+          description: >
+            Nach dieser Zeit wird der Bypass AUS automatisch zurückgesetzt.
+          default: 5
+          selector:
+            number:
+              min: 1
+              max: 15
+              step: 1
+              unit_of_measurement: "Min"
+
+# ══════════════════════════════════════════════════════════════
+#  VARIABLEN (berechnet aus Inputs)
+# ══════════════════════════════════════════════════════════════
+variables:
+  lights_list: !input all_lights
+  main_light_entity: !input main_light
+  include_lux_opt: !input include_lux
+  include_daylight_opt: !input include_daylight_off
+  include_night_opt: !input include_night_mode
+  include_guest_opt: !input include_guest_mode
+  include_scene_opt: !input include_scene_memory
+  include_bypass_opt: !input include_bypass
+  lux_sensor_entity: !input lux_sensor
+  lux_low_val: !input lux_threshold_low
+  lux_high_val: !input lux_threshold_high
+  night_boolean: !input night_mode_boolean
+  night_scene_entity: !input night_mode_scene
+  guest_boolean: !input guest_mode_boolean
+  guest_scene_entity: !input guest_mode_scene
+  timeout_normal_val: !input timeout_normal
+  timeout_night_val: !input timeout_night
+  timeout_guest_val: !input timeout_guest
+  scene_text_entity: !input scene_memory_text
+  scene_active_entity: !input scene_memory_active
+  scene_datetime_entity: !input scene_memory_datetime
+  scene_memory_min: !input scene_memory_minutes
+  bypass_on_entity: !input bypass_on_boolean
+  bypass_pause_entity: !input bypass_pause_boolean
+  bypass_off_entity: !input bypass_off_boolean
+  bypass_off_reset: !input bypass_off_reset_minutes
+
+# ══════════════════════════════════════════════════════════════
+#  TRIGGER
+# ══════════════════════════════════════════════════════════════
+triggers:
+  # --- Pflicht: Präsenz ---
+  - platform: state
+    entity_id: !input presence_sensor
+    to: "on"
+    id: presence_on
+
+  - platform: state
+    entity_id: !input presence_sensor
+    to: "off"
+    id: presence_off
+
+  # --- Pflicht: Auto-Licht Toggle ---
+  - platform: state
+    entity_id: !input auto_light_boolean
+    to: "on"
+    id: auto_light_on
+
+  - platform: state
+    entity_id: !input auto_light_boolean
+    to: "off"
+    id: auto_light_off
+
+  # --- Pflicht: Timer abgelaufen ---
+  - platform: event
+    event_type: timer.finished
+    event_data:
+      entity_id: !input off_timer
+    id: timer_finished
+
+  # --- Optional: Bypass ---
+  - platform: state
+    entity_id: !input bypass_off_boolean
+    to: "on"
+    id: bypass_off_on
+
+  - platform: state
+    entity_id: !input bypass_on_boolean
+    to: "on"
+    id: bypass_on_on
+
+  - platform: state
+    entity_id: !input bypass_on_boolean
+    to: "off"
+    id: bypass_on_off
+
+  # --- Optional: Modus-Wechsel bei Anwesenheit ---
+  - platform: state
+    entity_id: !input night_mode_boolean
+    id: mode_changed
+
+  - platform: state
+    entity_id: !input guest_mode_boolean
+    id: mode_changed
+
+  # --- Optional: LUX-Abfall bei Anwesenheit ---
+  - platform: numeric_state
+    entity_id: !input lux_sensor
+    below: !input lux_threshold_low
+    for:
+      seconds: 5
+    id: lux_low
+
+  # --- Optional: Tageslicht-Abschaltung ---
+  - platform: numeric_state
+    entity_id: sun.sun
+    attribute: elevation
+    above: 10
+    id: sun_high
+
+  - platform: numeric_state
+    entity_id: !input lux_sensor
+    above: !input lux_threshold_high
+    for:
+      minutes: 2
+    id: lux_high
+
+  # --- Optional: Szene aktiviert ---
+  - platform: state
+    entity_id: !input tracked_scenes
+    id: scene_activated
+
+  # --- Optional: Szenen-Gedächtnis Reset ---
+  - platform: state
+    entity_id: !input scene_reset_button
+    id: scene_reset
+
+# ══════════════════════════════════════════════════════════════
+#  CONDITION: Hauptschalter muss AN sein
+# ══════════════════════════════════════════════════════════════
+conditions:
+  - condition: state
+    entity_id: !input auto_light_boolean
+    state: "on"
+
+mode: restart
+
+# ══════════════════════════════════════════════════════════════
+#  ACTIONS
+# ══════════════════════════════════════════════════════════════
+actions:
+  - choose:
+
+      # ════════════════════════════════════════════════════════
+      #  SZENE AKTIVIERT → Merken
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id: scene_activated
+          - "{{ include_scene_opt == 'enable_scene_memory' }}"
+        sequence:
+          - action: input_text.set_value
+            target:
+              entity_id: !input scene_memory_text
+            data:
+              value: "{{ trigger.entity_id }}"
+          - action: input_boolean.turn_on
+            target:
+              entity_id: !input scene_memory_active
+
+      # ════════════════════════════════════════════════════════
+      #  SZENEN-GEDÄCHTNIS RESET → Alles leeren
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id: scene_reset
+          - "{{ include_scene_opt == 'enable_scene_memory' }}"
+        sequence:
+          - action: input_text.set_value
+            target:
+              entity_id: !input scene_memory_text
+            data:
+              value: ""
+          - action: input_boolean.turn_off
+            target:
+              entity_id: !input scene_memory_active
+
+      # ════════════════════════════════════════════════════════
+      #  BYPASS AUS → Sofort alle Lichter aus + Reset-Timer
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id: bypass_off_on
+          - "{{ include_bypass_opt == 'enable_bypass' }}"
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: "{{ lights_list }}"
+          # Szenen-Gedächtnis leeren (sauberer Neustart)
+          - if:
+              - "{{ include_scene_opt == 'enable_scene_memory' }}"
+            then:
+              - action: input_text.set_value
+                target:
+                  entity_id: !input scene_memory_text
+                data:
+                  value: ""
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: !input scene_memory_active
+          # Bypass-Reset-Timer starten
+          - action: timer.start
+            target:
+              entity_id: !input off_timer
+            data:
+              duration: "{{ (bypass_off_reset | int * 60) }}"
+
+      # ════════════════════════════════════════════════════════
+      #  BYPASS AN aktiviert → Licht an OHNE Dunkelheits-Check
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id: bypass_on_on
+          - "{{ include_bypass_opt == 'enable_bypass' }}"
+        sequence:
+          # Timer abbrechen falls laufend
+          - action: timer.cancel
+            target:
+              entity_id: !input off_timer
+          # Prioritätskette ohne Dunkelheits-Check
+          - choose:
+              - conditions:
+                  - "{{ include_night_opt == 'enable_night_mode' and is_state(night_boolean, 'on') }}"
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: !input night_mode_scene
+              - conditions:
+                  - "{{ include_scene_opt == 'enable_scene_memory' and is_state(scene_active_entity, 'on') }}"
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: "{{ states(scene_text_entity) }}"
+              - conditions:
+                  - "{{ include_guest_opt == 'enable_guest_mode' and is_state(guest_boolean, 'on') and guest_scene_entity | length > 0 }}"
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: !input guest_mode_scene
+            default:
+              - action: light.turn_on
+                target:
+                  entity_id: !input main_light
+
+      # ════════════════════════════════════════════════════════
+      #  BYPASS AN deaktiviert + keine Präsenz → aufräumen
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id: bypass_on_off
+          - "{{ include_bypass_opt == 'enable_bypass' }}"
+          - condition: state
+            entity_id: !input presence_sensor
+            state: "off"
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: "{{ lights_list }}"
+
+      # ════════════════════════════════════════════════════════
+      #  TIMER ABGELAUFEN → Lichter aus (oder Bypass-Reset)
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id: timer_finished
+        sequence:
+          - choose:
+              # Bypass AUS Reset: Timer war für Bypass
+              - conditions:
+                  - "{{ include_bypass_opt == 'enable_bypass' and is_state(bypass_off_entity, 'on') }}"
+                sequence:
+                  - action: input_boolean.turn_off
+                    target:
+                      entity_id: !input bypass_off_boolean
+            # Normal: Lichter ausschalten
+            default:
+              # Besuch-Modus: Dimm-Warnung
+              - if:
+                  - "{{ include_guest_opt == 'enable_guest_mode' and is_state(guest_boolean, 'on') }}"
+                then:
+                  - action: light.turn_on
+                    data:
+                      brightness_pct: 30
+                      transition: 3
+                      entity_id: >
+                        {{ expand(lights_list)
+                           | selectattr('state', 'eq', 'on')
+                           | map(attribute='entity_id') | list }}
+                  - delay:
+                      minutes: 2
+              # Alle Lichter aus
+              - action: light.turn_off
+                target:
+                  entity_id: "{{ lights_list }}"
+              # Szenen-Gedächtnis: Zeitstempel setzen
+              - if:
+                  - "{{ include_scene_opt == 'enable_scene_memory' and is_state(scene_active_entity, 'on') }}"
+                then:
+                  - action: input_datetime.set_datetime
+                    target:
+                      entity_id: !input scene_memory_datetime
+                    data:
+                      datetime: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+                  - action: input_boolean.turn_off
+                    target:
+                      entity_id: !input scene_memory_active
+                else:
+                  # Keine Szene aktiv → Gedächtnis leeren
+                  - if:
+                      - "{{ include_scene_opt == 'enable_scene_memory' }}"
+                    then:
+                      - action: input_text.set_value
+                        target:
+                          entity_id: !input scene_memory_text
+                        data:
+                          value: ""
+
+      # ════════════════════════════════════════════════════════
+      #  TAGESLICHT: Sun hoch oder LUX hoch → Lichter aus
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id:
+              - sun_high
+              - lux_high
+          - "{{ include_daylight_opt == 'enable_daylight_off' }}"
+          # Nur tagsüber
+          - condition: numeric_state
+            entity_id: sun.sun
+            attribute: elevation
+            above: 0
+          # Mindestens ein Licht muss an sein
+          - "{{ expand(lights_list) | selectattr('state', 'eq', 'on') | list | count > 0 }}"
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: "{{ lights_list }}"
+
+      # ════════════════════════════════════════════════════════
+      #  MODUS-WECHSEL / LUX-ABFALL bei Anwesenheit
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id:
+              - mode_changed
+              - lux_low
+          - condition: state
+            entity_id: !input presence_sensor
+            state: "on"
+          # Bypass prüfen
+          - "{{ not (include_bypass_opt == 'enable_bypass' and (is_state(bypass_off_entity, 'on') or is_state(bypass_pause_entity, 'on'))) }}"
+        sequence:
+          - action: light.turn_off
+            target:
+              entity_id: "{{ lights_list }}"
+          - delay:
+              milliseconds: 500
+          # Dunkelheits-Check
+          - condition: or
+            conditions:
+              - condition: numeric_state
+                entity_id: sun.sun
+                attribute: elevation
+                below: 0
+              - "{{ include_lux_opt == 'enable_lux' and states(lux_sensor_entity) | float(999) < lux_low_val | float }}"
+          # Prioritätskette
+          - choose:
+              - conditions:
+                  - "{{ include_night_opt == 'enable_night_mode' and is_state(night_boolean, 'on') }}"
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: !input night_mode_scene
+              - conditions:
+                  - >
+                    {{ include_scene_opt == 'enable_scene_memory'
+                       and states(scene_text_entity) not in ['', 'unknown', 'unavailable']
+                       and states(scene_datetime_entity) not in ['unknown', 'unavailable']
+                       and (as_timestamp(now()) - as_timestamp(states(scene_datetime_entity))) < (scene_memory_min | int * 60) }}
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: "{{ states(scene_text_entity) }}"
+              - conditions:
+                  - "{{ include_guest_opt == 'enable_guest_mode' and is_state(guest_boolean, 'on') and guest_scene_entity | length > 0 }}"
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: !input guest_mode_scene
+            default:
+              - action: light.turn_on
+                target:
+                  entity_id: !input main_light
+
+      # ════════════════════════════════════════════════════════
+      #  PRÄSENZ ON / AUTO-LICHT EIN → Licht an
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id:
+              - presence_on
+              - auto_light_on
+          # Bypass prüfen
+          - "{{ not (include_bypass_opt == 'enable_bypass' and (is_state(bypass_off_entity, 'on') or is_state(bypass_pause_entity, 'on'))) }}"
+          # Bei auto_light_on: Präsenz muss aktiv sein
+          - condition: or
+            conditions:
+              - condition: trigger
+                id: presence_on
+              - condition: state
+                entity_id: !input presence_sensor
+                state: "on"
+        sequence:
+          # Timer abbrechen (nur wenn Bypass AUS nicht aktiv)
+          - if:
+              - "{{ not (include_bypass_opt == 'enable_bypass' and is_state(bypass_off_entity, 'on')) }}"
+            then:
+              - action: timer.cancel
+                target:
+                  entity_id: !input off_timer
+          # Dunkelheits-Check
+          - condition: or
+            conditions:
+              - condition: numeric_state
+                entity_id: sun.sun
+                attribute: elevation
+                below: 0
+              - "{{ include_lux_opt == 'enable_lux' and states(lux_sensor_entity) | float(999) < lux_low_val | float }}"
+          # Prioritätskette
+          - choose:
+              # P1: Nachtmodus
+              - conditions:
+                  - "{{ include_night_opt == 'enable_night_mode' and is_state(night_boolean, 'on') }}"
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: !input night_mode_scene
+              # P2: Szenen-Gedächtnis
+              - conditions:
+                  - >
+                    {{ include_scene_opt == 'enable_scene_memory'
+                       and states(scene_text_entity) not in ['', 'unknown', 'unavailable']
+                       and states(scene_datetime_entity) not in ['unknown', 'unavailable']
+                       and (as_timestamp(now()) - as_timestamp(states(scene_datetime_entity))) < (scene_memory_min | int * 60) }}
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: "{{ states(scene_text_entity) }}"
+              # P3: Besuch-Modus
+              - conditions:
+                  - "{{ include_guest_opt == 'enable_guest_mode' and is_state(guest_boolean, 'on') and guest_scene_entity | length > 0 }}"
+                sequence:
+                  - action: scene.turn_on
+                    target:
+                      entity_id: !input guest_mode_scene
+            # P4: Default → Hauptlicht (Adaptive Lighting steuert)
+            default:
+              # Alte Szenendaten aufräumen falls abgelaufen
+              - if:
+                  - "{{ include_scene_opt == 'enable_scene_memory' and states(scene_text_entity) not in ['', 'unknown', 'unavailable'] }}"
+                then:
+                  - action: input_text.set_value
+                    target:
+                      entity_id: !input scene_memory_text
+                    data:
+                      value: ""
+              - action: light.turn_on
+                target:
+                  entity_id: !input main_light
+
+      # ════════════════════════════════════════════════════════
+      #  PRÄSENZ OFF → Timer starten
+      # ════════════════════════════════════════════════════════
+      - conditions:
+          - condition: trigger
+            id: presence_off
+          # Bypass AN und Pause blockieren
+          - "{{ not (include_bypass_opt == 'enable_bypass' and (is_state(bypass_on_entity, 'on') or is_state(bypass_pause_entity, 'on'))) }}"
+        sequence:
+          # Timer mit passendem Timeout starten
+          - action: timer.start
+            target:
+              entity_id: !input off_timer
+            data:
+              duration: >
+                {% if include_night_opt == 'enable_night_mode' and is_state(night_boolean, 'on') %}
+                  {{ (timeout_night_val | float * 60) | int }}
+                {% elif include_guest_opt == 'enable_guest_mode' and is_state(guest_boolean, 'on') %}
+                  {{ (timeout_guest_val | float * 60) | int }}
+                {% else %}
+                  {{ (timeout_normal_val | float * 60) | int }}
+                {% endif %}

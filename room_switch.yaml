@@ -1,0 +1,708 @@
+blueprint:
+  name: "Room Switch (4 Tasten)"
+  source_url: "https://github.com/timfast03/ha-blueprints/blob/main/room_switch.yaml"
+  description: >
+    # 🔘 Room Switch
+
+
+    **Version: 1.0**
+
+
+    Modularer 4-Tasten-Schalter für Aqara, Zigbee und andere
+    Event-basierte Schalter. Jede Taste ist individuell konfigurierbar.
+    Kompatibel mit der Room Lighting Blueprint.
+
+
+    **Pro Taste konfigurierbar:**
+    Licht-Toggle, Szene aktivieren, Bypass steuern, Besuch-Modus,
+    Alles-AUS, oder beliebige Entity toggeln.
+
+
+    **Toggle-Logik:** Deckenlampe aus → an, Deckenlampe an → Szene hell.
+    AN/Szenen-Tasten heben einen aktiven Bypass AUS automatisch auf.
+  domain: automation
+  input:
+
+    # ══════════════════════════════════════════════════════════════
+    #  TASTE 1 (z.B. Oben Links)
+    # ══════════════════════════════════════════════════════════════
+    button_1_settings:
+      name: "Taste 1"
+      icon: "mdi:gesture-tap"
+      collapsed: true
+      input:
+        button_1_entity:
+          name: "Taste 1 - Event Entity *"
+          description: >
+            Die Event-Entity der Taste (z.B. event.aqara_taste_5).
+            Leer lassen um diese Taste zu deaktivieren.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: event
+        button_1_action:
+          name: "Taste 1 - Aktion"
+          description: >
+            Was soll bei Tastendruck passieren?
+          default: "toggle_light"
+          selector:
+            select:
+              options:
+                - label: "Toggle Licht (aus→an, an→Szene hell)"
+                  value: "toggle_light"
+                - label: "Szene aktivieren"
+                  value: "activate_scene"
+                - label: "Raum AUS (Bypass + alle Lichter aus)"
+                  value: "room_off"
+                - label: "Alles AUS (mehrere Bereiche)"
+                  value: "all_off"
+                - label: "Besuch-Szene + Modus aktivieren"
+                  value: "guest_on"
+                - label: "Entity toggeln"
+                  value: "toggle_entity"
+        button_1_light:
+          name: "Taste 1 - Hauptlicht (für Toggle)"
+          description: >
+            Das Licht das geprüft wird (aus→an) und das eingeschaltet wird.
+            Nur relevant bei Aktion "Toggle Licht".
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: light
+        button_1_scene:
+          name: "Taste 1 - Szene"
+          description: >
+            Die Szene für "Toggle hell" oder "Szene aktivieren".
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: scene
+        button_1_off_lights:
+          name: "Taste 1 - AUS-Lichter"
+          description: >
+            Lichter die bei "Raum AUS" oder "Alles AUS" ausgeschaltet werden.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: light
+              multiple: true
+        button_1_off_area:
+          name: "Taste 1 - AUS-Bereich (Area)"
+          description: >
+            Zusätzlicher Bereich der bei "Alles AUS" ausgeschaltet wird.
+            Leer lassen wenn nicht benötigt.
+          default: ""
+          selector:
+            text:
+        button_1_bypass_off:
+          name: "Taste 1 - Bypass AUS Helper"
+          description: >
+            Der Bypass-AUS Helper der bei "Raum AUS"/"Alles AUS" aktiviert wird
+            und bei "Toggle"/"Szene"/"Besuch" deaktiviert wird.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_1_guest_boolean:
+          name: "Taste 1 - Besuch-Modus Helper"
+          description: >
+            Der Besuch-Modus Helper. Nur für Aktion "Besuch-Szene"
+            und "Alles AUS" (dort wird er ausgeschaltet).
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_1_scene_memory_text:
+          name: "Taste 1 - Szenen-Gedächtnis Text"
+          description: >
+            Input-Text für Szenen-Gedächtnis leeren bei Besuch/AUS.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_text
+        button_1_scene_memory_active:
+          name: "Taste 1 - Szenen-Gedächtnis Flag"
+          description: >
+            Input-Boolean für Szenen-Gedächtnis leeren bei Besuch/AUS.
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_1_toggle_entity:
+          name: "Taste 1 - Toggle Entity"
+          description: >
+            Entity die bei "Entity toggeln" umgeschaltet wird.
+          default: []
+          selector:
+            entity: {}
+
+    # ══════════════════════════════════════════════════════════════
+    #  TASTE 2 (z.B. Oben Rechts)
+    # ══════════════════════════════════════════════════════════════
+    button_2_settings:
+      name: "Taste 2"
+      icon: "mdi:gesture-tap"
+      collapsed: true
+      input:
+        button_2_entity:
+          name: "Taste 2 - Event Entity *"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: event
+        button_2_action:
+          name: "Taste 2 - Aktion"
+          default: "toggle_light"
+          selector:
+            select:
+              options:
+                - label: "Toggle Licht (aus→an, an→Szene hell)"
+                  value: "toggle_light"
+                - label: "Szene aktivieren"
+                  value: "activate_scene"
+                - label: "Raum AUS (Bypass + alle Lichter aus)"
+                  value: "room_off"
+                - label: "Alles AUS (mehrere Bereiche)"
+                  value: "all_off"
+                - label: "Besuch-Szene + Modus aktivieren"
+                  value: "guest_on"
+                - label: "Entity toggeln"
+                  value: "toggle_entity"
+        button_2_light:
+          name: "Taste 2 - Hauptlicht"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: light
+        button_2_scene:
+          name: "Taste 2 - Szene"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: scene
+        button_2_off_lights:
+          name: "Taste 2 - AUS-Lichter"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: light
+              multiple: true
+        button_2_off_area:
+          name: "Taste 2 - AUS-Bereich (Area)"
+          default: ""
+          selector:
+            text:
+        button_2_bypass_off:
+          name: "Taste 2 - Bypass AUS Helper"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_2_guest_boolean:
+          name: "Taste 2 - Besuch-Modus Helper"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_2_scene_memory_text:
+          name: "Taste 2 - Szenen-Gedächtnis Text"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_text
+        button_2_scene_memory_active:
+          name: "Taste 2 - Szenen-Gedächtnis Flag"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_2_toggle_entity:
+          name: "Taste 2 - Toggle Entity"
+          default: []
+          selector:
+            entity: {}
+
+    # ══════════════════════════════════════════════════════════════
+    #  TASTE 3 (z.B. Unten Links)
+    # ══════════════════════════════════════════════════════════════
+    button_3_settings:
+      name: "Taste 3"
+      icon: "mdi:gesture-tap"
+      collapsed: true
+      input:
+        button_3_entity:
+          name: "Taste 3 - Event Entity *"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: event
+        button_3_action:
+          name: "Taste 3 - Aktion"
+          default: "activate_scene"
+          selector:
+            select:
+              options:
+                - label: "Toggle Licht (aus→an, an→Szene hell)"
+                  value: "toggle_light"
+                - label: "Szene aktivieren"
+                  value: "activate_scene"
+                - label: "Raum AUS (Bypass + alle Lichter aus)"
+                  value: "room_off"
+                - label: "Alles AUS (mehrere Bereiche)"
+                  value: "all_off"
+                - label: "Besuch-Szene + Modus aktivieren"
+                  value: "guest_on"
+                - label: "Entity toggeln"
+                  value: "toggle_entity"
+        button_3_light:
+          name: "Taste 3 - Hauptlicht"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: light
+        button_3_scene:
+          name: "Taste 3 - Szene"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: scene
+        button_3_off_lights:
+          name: "Taste 3 - AUS-Lichter"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: light
+              multiple: true
+        button_3_off_area:
+          name: "Taste 3 - AUS-Bereich (Area)"
+          default: ""
+          selector:
+            text:
+        button_3_bypass_off:
+          name: "Taste 3 - Bypass AUS Helper"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_3_guest_boolean:
+          name: "Taste 3 - Besuch-Modus Helper"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_3_scene_memory_text:
+          name: "Taste 3 - Szenen-Gedächtnis Text"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_text
+        button_3_scene_memory_active:
+          name: "Taste 3 - Szenen-Gedächtnis Flag"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_3_toggle_entity:
+          name: "Taste 3 - Toggle Entity"
+          default: []
+          selector:
+            entity: {}
+
+    # ══════════════════════════════════════════════════════════════
+    #  TASTE 4 (z.B. Unten Rechts)
+    # ══════════════════════════════════════════════════════════════
+    button_4_settings:
+      name: "Taste 4"
+      icon: "mdi:gesture-tap"
+      collapsed: true
+      input:
+        button_4_entity:
+          name: "Taste 4 - Event Entity *"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: event
+        button_4_action:
+          name: "Taste 4 - Aktion"
+          default: "room_off"
+          selector:
+            select:
+              options:
+                - label: "Toggle Licht (aus→an, an→Szene hell)"
+                  value: "toggle_light"
+                - label: "Szene aktivieren"
+                  value: "activate_scene"
+                - label: "Raum AUS (Bypass + alle Lichter aus)"
+                  value: "room_off"
+                - label: "Alles AUS (mehrere Bereiche)"
+                  value: "all_off"
+                - label: "Besuch-Szene + Modus aktivieren"
+                  value: "guest_on"
+                - label: "Entity toggeln"
+                  value: "toggle_entity"
+        button_4_light:
+          name: "Taste 4 - Hauptlicht"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: light
+        button_4_scene:
+          name: "Taste 4 - Szene"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: scene
+        button_4_off_lights:
+          name: "Taste 4 - AUS-Lichter"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: light
+              multiple: true
+        button_4_off_area:
+          name: "Taste 4 - AUS-Bereich (Area)"
+          default: ""
+          selector:
+            text:
+        button_4_bypass_off:
+          name: "Taste 4 - Bypass AUS Helper"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_4_guest_boolean:
+          name: "Taste 4 - Besuch-Modus Helper"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_4_scene_memory_text:
+          name: "Taste 4 - Szenen-Gedächtnis Text"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_text
+        button_4_scene_memory_active:
+          name: "Taste 4 - Szenen-Gedächtnis Flag"
+          default: []
+          selector:
+            entity:
+              filter:
+                domain: input_boolean
+        button_4_toggle_entity:
+          name: "Taste 4 - Toggle Entity"
+          default: []
+          selector:
+            entity: {}
+
+# ══════════════════════════════════════════════════════════════
+#  VARIABLEN
+# ══════════════════════════════════════════════════════════════
+variables:
+  b1_action: !input button_1_action
+  b1_light: !input button_1_light
+  b1_scene: !input button_1_scene
+  b1_off_lights: !input button_1_off_lights
+  b1_off_area: !input button_1_off_area
+  b1_bypass_off: !input button_1_bypass_off
+  b1_guest: !input button_1_guest_boolean
+  b1_mem_text: !input button_1_scene_memory_text
+  b1_mem_active: !input button_1_scene_memory_active
+  b1_toggle: !input button_1_toggle_entity
+  b2_action: !input button_2_action
+  b2_light: !input button_2_light
+  b2_scene: !input button_2_scene
+  b2_off_lights: !input button_2_off_lights
+  b2_off_area: !input button_2_off_area
+  b2_bypass_off: !input button_2_bypass_off
+  b2_guest: !input button_2_guest_boolean
+  b2_mem_text: !input button_2_scene_memory_text
+  b2_mem_active: !input button_2_scene_memory_active
+  b2_toggle: !input button_2_toggle_entity
+  b3_action: !input button_3_action
+  b3_light: !input button_3_light
+  b3_scene: !input button_3_scene
+  b3_off_lights: !input button_3_off_lights
+  b3_off_area: !input button_3_off_area
+  b3_bypass_off: !input button_3_bypass_off
+  b3_guest: !input button_3_guest_boolean
+  b3_mem_text: !input button_3_scene_memory_text
+  b3_mem_active: !input button_3_scene_memory_active
+  b3_toggle: !input button_3_toggle_entity
+  b4_action: !input button_4_action
+  b4_light: !input button_4_light
+  b4_scene: !input button_4_scene
+  b4_off_lights: !input button_4_off_lights
+  b4_off_area: !input button_4_off_area
+  b4_bypass_off: !input button_4_bypass_off
+  b4_guest: !input button_4_guest_boolean
+  b4_mem_text: !input button_4_scene_memory_text
+  b4_mem_active: !input button_4_scene_memory_active
+  b4_toggle: !input button_4_toggle_entity
+
+# ══════════════════════════════════════════════════════════════
+#  TRIGGER
+# ══════════════════════════════════════════════════════════════
+triggers:
+  - trigger: state
+    entity_id: !input button_1_entity
+    to: null
+    id: button_1
+  - trigger: state
+    entity_id: !input button_2_entity
+    to: null
+    id: button_2
+  - trigger: state
+    entity_id: !input button_3_entity
+    to: null
+    id: button_3
+  - trigger: state
+    entity_id: !input button_4_entity
+    to: null
+    id: button_4
+
+conditions: []
+mode: single
+
+# ══════════════════════════════════════════════════════════════
+#  ACTIONS: Generische Verarbeitung pro Taste
+# ══════════════════════════════════════════════════════════════
+actions:
+  # Variablen für aktuelle Taste setzen
+  - variables:
+      btn_action: >
+        {% if trigger.id == 'button_1' %}{{ b1_action }}
+        {% elif trigger.id == 'button_2' %}{{ b2_action }}
+        {% elif trigger.id == 'button_3' %}{{ b3_action }}
+        {% elif trigger.id == 'button_4' %}{{ b4_action }}
+        {% endif %}
+      btn_light: >
+        {% if trigger.id == 'button_1' %}{{ b1_light }}
+        {% elif trigger.id == 'button_2' %}{{ b2_light }}
+        {% elif trigger.id == 'button_3' %}{{ b3_light }}
+        {% elif trigger.id == 'button_4' %}{{ b4_light }}
+        {% endif %}
+      btn_scene: >
+        {% if trigger.id == 'button_1' %}{{ b1_scene }}
+        {% elif trigger.id == 'button_2' %}{{ b2_scene }}
+        {% elif trigger.id == 'button_3' %}{{ b3_scene }}
+        {% elif trigger.id == 'button_4' %}{{ b4_scene }}
+        {% endif %}
+      btn_off_lights: >
+        {% if trigger.id == 'button_1' %}{{ b1_off_lights }}
+        {% elif trigger.id == 'button_2' %}{{ b2_off_lights }}
+        {% elif trigger.id == 'button_3' %}{{ b3_off_lights }}
+        {% elif trigger.id == 'button_4' %}{{ b4_off_lights }}
+        {% endif %}
+      btn_off_area: >
+        {% if trigger.id == 'button_1' %}{{ b1_off_area }}
+        {% elif trigger.id == 'button_2' %}{{ b2_off_area }}
+        {% elif trigger.id == 'button_3' %}{{ b3_off_area }}
+        {% elif trigger.id == 'button_4' %}{{ b4_off_area }}
+        {% endif %}
+      btn_bypass_off: >
+        {% if trigger.id == 'button_1' %}{{ b1_bypass_off }}
+        {% elif trigger.id == 'button_2' %}{{ b2_bypass_off }}
+        {% elif trigger.id == 'button_3' %}{{ b3_bypass_off }}
+        {% elif trigger.id == 'button_4' %}{{ b4_bypass_off }}
+        {% endif %}
+      btn_guest: >
+        {% if trigger.id == 'button_1' %}{{ b1_guest }}
+        {% elif trigger.id == 'button_2' %}{{ b2_guest }}
+        {% elif trigger.id == 'button_3' %}{{ b3_guest }}
+        {% elif trigger.id == 'button_4' %}{{ b4_guest }}
+        {% endif %}
+      btn_mem_text: >
+        {% if trigger.id == 'button_1' %}{{ b1_mem_text }}
+        {% elif trigger.id == 'button_2' %}{{ b2_mem_text }}
+        {% elif trigger.id == 'button_3' %}{{ b3_mem_text }}
+        {% elif trigger.id == 'button_4' %}{{ b4_mem_text }}
+        {% endif %}
+      btn_mem_active: >
+        {% if trigger.id == 'button_1' %}{{ b1_mem_active }}
+        {% elif trigger.id == 'button_2' %}{{ b2_mem_active }}
+        {% elif trigger.id == 'button_3' %}{{ b3_mem_active }}
+        {% elif trigger.id == 'button_4' %}{{ b4_mem_active }}
+        {% endif %}
+      btn_toggle: >
+        {% if trigger.id == 'button_1' %}{{ b1_toggle }}
+        {% elif trigger.id == 'button_2' %}{{ b2_toggle }}
+        {% elif trigger.id == 'button_3' %}{{ b3_toggle }}
+        {% elif trigger.id == 'button_4' %}{{ b4_toggle }}
+        {% endif %}
+
+  # ── Aktion ausführen ──
+  - choose:
+
+      # ── TOGGLE LICHT ──
+      - conditions:
+          - "{{ btn_action == 'toggle_light' }}"
+        sequence:
+          # Bypass AUS aufheben
+          - if:
+              - "{{ btn_bypass_off | length > 0 }}"
+            then:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: "{{ btn_bypass_off }}"
+          # Toggle: Licht aus → an, an → Szene hell
+          - if:
+              - "{{ is_state(btn_light, 'off') }}"
+            then:
+              - action: light.turn_on
+                target:
+                  entity_id: "{{ btn_light }}"
+            else:
+              - action: scene.turn_on
+                target:
+                  entity_id: "{{ btn_scene }}"
+
+      # ── SZENE AKTIVIEREN ──
+      - conditions:
+          - "{{ btn_action == 'activate_scene' }}"
+        sequence:
+          - if:
+              - "{{ btn_bypass_off | length > 0 }}"
+            then:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: "{{ btn_bypass_off }}"
+          - action: scene.turn_on
+            target:
+              entity_id: "{{ btn_scene }}"
+
+      # ── RAUM AUS ──
+      - conditions:
+          - "{{ btn_action == 'room_off' }}"
+        sequence:
+          - if:
+              - "{{ btn_bypass_off | length > 0 }}"
+            then:
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: "{{ btn_bypass_off }}"
+          - action: light.turn_off
+            target:
+              entity_id: "{{ btn_off_lights }}"
+          # Szenen-Gedächtnis leeren
+          - if:
+              - "{{ btn_mem_text | length > 0 }}"
+            then:
+              - action: input_text.set_value
+                target:
+                  entity_id: "{{ btn_mem_text }}"
+                data:
+                  value: ""
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: "{{ btn_mem_active }}"
+
+      # ── ALLES AUS ──
+      - conditions:
+          - "{{ btn_action == 'all_off' }}"
+        sequence:
+          - if:
+              - "{{ btn_bypass_off | length > 0 }}"
+            then:
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: "{{ btn_bypass_off }}"
+          # Besuch-Modus ausschalten
+          - if:
+              - "{{ btn_guest | length > 0 }}"
+            then:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: "{{ btn_guest }}"
+          - action: light.turn_off
+            target:
+              entity_id: "{{ btn_off_lights }}"
+          - if:
+              - "{{ btn_off_area | length > 0 }}"
+            then:
+              - action: light.turn_off
+                target:
+                  area_id: "{{ btn_off_area }}"
+          # Szenen-Gedächtnis leeren
+          - if:
+              - "{{ btn_mem_text | length > 0 }}"
+            then:
+              - action: input_text.set_value
+                target:
+                  entity_id: "{{ btn_mem_text }}"
+                data:
+                  value: ""
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: "{{ btn_mem_active }}"
+
+      # ── BESUCH-SZENE + MODUS ──
+      - conditions:
+          - "{{ btn_action == 'guest_on' }}"
+        sequence:
+          - if:
+              - "{{ btn_bypass_off | length > 0 }}"
+            then:
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: "{{ btn_bypass_off }}"
+          - if:
+              - "{{ btn_guest | length > 0 }}"
+            then:
+              - action: input_boolean.turn_on
+                target:
+                  entity_id: "{{ btn_guest }}"
+          # Szenen-Gedächtnis leeren
+          - if:
+              - "{{ btn_mem_text | length > 0 }}"
+            then:
+              - action: input_text.set_value
+                target:
+                  entity_id: "{{ btn_mem_text }}"
+                data:
+                  value: ""
+              - action: input_boolean.turn_off
+                target:
+                  entity_id: "{{ btn_mem_active }}"
+          - action: scene.turn_on
+            target:
+              entity_id: "{{ btn_scene }}"
+
+      # ── ENTITY TOGGELN ──
+      - conditions:
+          - "{{ btn_action == 'toggle_entity' }}"
+        sequence:
+          - action: homeassistant.toggle
+            target:
+              entity_id: "{{ btn_toggle }}"
